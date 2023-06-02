@@ -1,0 +1,453 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1000px;
+                 height: 700px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 1000px;
+                 height: 700px;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"font": {"color": "white"}, "group": 3, "id": "Dassem", "label": "Dassem", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Laseen", "label": "Laseen", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 2, "id": "Whiskeyjack", "label": "Whiskeyjack", "shape": "dot", "size": 8}, {"font": {"color": "white"}, "group": 3, "id": "Dassem Ultor", "label": "Dassem Ultor", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Surly", "label": "Surly", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "K\u0027azz D\u0027Avore", "label": "K\u0027azz D\u0027Avore", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Seer", "label": "Seer", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Ammanas", "label": "Ammanas", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Lorn", "label": "Lorn", "shape": "dot", "size": 17}, {"font": {"color": "white"}, "group": 1, "id": "Genabackis", "label": "Genabackis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "Sorry", "label": "Sorry", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 3, "id": "Warren", "label": "Warren", "shape": "dot", "size": 12}, {"font": {"color": "white"}, "group": 1, "id": "Topper", "label": "Topper", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Tattersail", "label": "Tattersail", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 1, "id": "Calot", "label": "Calot", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "Kalam", "label": "Kalam", "shape": "dot", "size": 22}, {"font": {"color": "white"}, "group": 1, "id": "Dujek", "label": "Dujek", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 2, "id": "Quick Ben", "label": "Quick Ben", "shape": "dot", "size": 16}, {"font": {"color": "white"}, "group": 3, "id": "Kellanved", "label": "Kellanved", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Vorcan", "label": "Vorcan", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Baruk", "label": "Baruk", "shape": "dot", "size": 12}, {"font": {"color": "white"}, "group": 0, "id": "Kruppe", "label": "Kruppe", "shape": "dot", "size": 26}, {"font": {"color": "white"}, "group": 2, "id": "Shadowthrone", "label": "Shadowthrone", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 0, "id": "Rake", "label": "Rake", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 1, "id": "Caladan Brood", "label": "Caladan Brood", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "Brood", "label": "Brood", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "Anomander Rake", "label": "Anomander Rake", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "Tayschrenn", "label": "Tayschrenn", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 1, "id": "Hairlock", "label": "Hairlock", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 1, "id": "K\u0027azz", "label": "K\u0027azz", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Crone", "label": "Crone", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "Kallor", "label": "Kallor", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Bellurdan", "label": "Bellurdan", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Fingers", "label": "Fingers", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Crokus", "label": "Crokus", "shape": "dot", "size": 30}, {"font": {"color": "white"}, "group": 0, "id": "Coll", "label": "Coll", "shape": "dot", "size": 7}, {"font": {"color": "white"}, "group": 0, "id": "Meese", "label": "Meese", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 3, "id": "Cotillion", "label": "Cotillion", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Antsy", "label": "Antsy", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Toc", "label": "Toc", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Toc the Younger", "label": "Toc the Younger", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Onos T\u0027oolan", "label": "Onos T\u0027oolan", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Logros", "label": "Logros", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Dancer", "label": "Dancer", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Mallet", "label": "Mallet", "shape": "dot", "size": 5}, {"font": {"color": "white"}, "group": 0, "id": "Circle Breaker", "label": "Circle Breaker", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Hedge", "label": "Hedge", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Fiddler", "label": "Fiddler", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Eel", "label": "Eel", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Onearm", "label": "Onearm", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Trotts", "label": "Trotts", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "Gear", "label": "Gear", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Scurve", "label": "Scurve", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Murillio", "label": "Murillio", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 3, "id": "Raest", "label": "Raest", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Warren of Shadow", "label": "Warren of Shadow", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Mammot", "label": "Mammot", "shape": "dot", "size": 6}, {"font": {"color": "white"}, "group": 0, "id": "Serrat", "label": "Serrat", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Silanah", "label": "Silanah", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "K\u0027rul", "label": "K\u0027rul", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Derudan", "label": "Derudan", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "Gamet", "label": "Gamet", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Dujek Onearm", "label": "Dujek Onearm", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Tavore", "label": "Tavore", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Felisin", "label": "Felisin", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "A\u0027Karonys", "label": "A\u0027Karonys", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Nightchill", "label": "Nightchill", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Picker", "label": "Picker", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Pran", "label": "Pran", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Pran Chole", "label": "Pran Chole", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Irilta", "label": "Irilta", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Orr", "label": "Orr", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Ultor", "label": "Ultor", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Quick", "label": "Quick", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Blind", "label": "Blind", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Doan", "label": "Doan", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Rood", "label": "Rood", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Shan", "label": "Shan", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Rope", "label": "Rope", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Rallick", "label": "Rallick", "shape": "dot", "size": 13}, {"font": {"color": "white"}, "group": 0, "id": "Rallick Nom", "label": "Rallick Nom", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "Ocelot", "label": "Ocelot", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Stillis", "label": "Stillis", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Jorrick Sharplance", "label": "Jorrick Sharplance", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Jorrick", "label": "Jorrick", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Icarium", "label": "Icarium", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "D\u0027Arle", "label": "D\u0027Arle", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Nom", "label": "Nom", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Crokus Younghand", "label": "Crokus Younghand", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Simtal", "label": "Simtal", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Horult", "label": "Horult", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Korlat", "label": "Korlat", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Sulty", "label": "Sulty", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Krute of Talient", "label": "Krute of Talient", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Chert", "label": "Chert", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Turban Orr", "label": "Turban Orr", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "Talo Krafar", "label": "Talo Krafar", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Challice", "label": "Challice", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Estraysian D\u0027Arle", "label": "Estraysian D\u0027Arle", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Estraysian", "label": "Estraysian", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Talo", "label": "Talo", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Challice D\u0027Arle", "label": "Challice D\u0027Arle", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Cowl", "label": "Cowl", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Travale", "label": "Travale", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Lim", "label": "Lim", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Turban", "label": "Turban", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Vildron", "label": "Vildron", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Krute", "label": "Krute", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Baran", "label": "Baran", "shape": "dot", "size": 0}]);
+                  edges = new vis.DataSet([{"from": "Dassem", "to": "Laseen", "value": 1, "width": 1}, {"from": "Dassem", "to": "Whiskeyjack", "value": 3, "width": 1}, {"from": "Dassem", "to": "Dassem Ultor", "value": 1, "width": 1}, {"from": "Laseen", "to": "Surly", "value": 3, "width": 1}, {"from": "Laseen", "to": "K\u0027azz D\u0027Avore", "value": 1, "width": 1}, {"from": "Laseen", "to": "Seer", "value": 2, "width": 1}, {"from": "Laseen", "to": "Ammanas", "value": 5, "width": 1}, {"from": "Laseen", "to": "Lorn", "value": 16, "width": 1}, {"from": "Laseen", "to": "Genabackis", "value": 2, "width": 1}, {"from": "Laseen", "to": "Sorry", "value": 1, "width": 1}, {"from": "Laseen", "to": "Warren", "value": 3, "width": 1}, {"from": "Laseen", "to": "Topper", "value": 4, "width": 1}, {"from": "Laseen", "to": "Tattersail", "value": 10, "width": 1}, {"from": "Laseen", "to": "Calot", "value": 2, "width": 1}, {"from": "Laseen", "to": "Kalam", "value": 6, "width": 1}, {"from": "Laseen", "to": "Dujek", "value": 2, "width": 1}, {"from": "Laseen", "to": "Quick Ben", "value": 1, "width": 1}, {"from": "Laseen", "to": "Kellanved", "value": 1, "width": 1}, {"from": "Laseen", "to": "Vorcan", "value": 1, "width": 1}, {"from": "Laseen", "to": "Baruk", "value": 6, "width": 1}, {"from": "Laseen", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Laseen", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Laseen", "to": "Rake", "value": 1, "width": 1}, {"from": "Laseen", "to": "Whiskeyjack", "value": 2, "width": 1}, {"from": "Surly", "to": "K\u0027azz D\u0027Avore", "value": 1, "width": 1}, {"from": "Surly", "to": "Whiskeyjack", "value": 2, "width": 1}, {"from": "Caladan Brood", "to": "K\u0027azz D\u0027Avore", "value": 2, "width": 1}, {"from": "Caladan Brood", "to": "Genabackis", "value": 1, "width": 1}, {"from": "Caladan Brood", "to": "Brood", "value": 7, "width": 1}, {"from": "Caladan Brood", "to": "Tattersail", "value": 3, "width": 1}, {"from": "Caladan Brood", "to": "Calot", "value": 4, "width": 1}, {"from": "Caladan Brood", "to": "Dujek", "value": 11, "width": 1}, {"from": "Caladan Brood", "to": "Anomander Rake", "value": 3, "width": 1}, {"from": "Caladan Brood", "to": "Tayschrenn", "value": 3, "width": 1}, {"from": "Caladan Brood", "to": "Hairlock", "value": 1, "width": 1}, {"from": "Caladan Brood", "to": "Kalam", "value": 2, "width": 1}, {"from": "Caladan Brood", "to": "Baruk", "value": 5, "width": 1}, {"from": "Caladan Brood", "to": "Lorn", "value": 4, "width": 1}, {"from": "Caladan Brood", "to": "K\u0027azz", "value": 1, "width": 1}, {"from": "Caladan Brood", "to": "Crone", "value": 6, "width": 1}, {"from": "Caladan Brood", "to": "Kallor", "value": 6, "width": 1}, {"from": "Caladan Brood", "to": "Rake", "value": 3, "width": 1}, {"from": "Caladan Brood", "to": "Bellurdan", "value": 1, "width": 1}, {"from": "Caladan Brood", "to": "Fingers", "value": 1, "width": 1}, {"from": "Caladan Brood", "to": "Crokus", "value": 1, "width": 1}, {"from": "Seer", "to": "Baruk", "value": 1, "width": 1}, {"from": "Seer", "to": "Sorry", "value": 2, "width": 1}, {"from": "Seer", "to": "Crokus", "value": 4, "width": 1}, {"from": "Seer", "to": "Ammanas", "value": 1, "width": 1}, {"from": "Seer", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Seer", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Seer", "to": "Whiskeyjack", "value": 2, "width": 1}, {"from": "Seer", "to": "Coll", "value": 1, "width": 1}, {"from": "Seer", "to": "Kalam", "value": 2, "width": 1}, {"from": "Seer", "to": "Meese", "value": 1, "width": 1}, {"from": "Ammanas", "to": "Cotillion", "value": 2, "width": 1}, {"from": "Ammanas", "to": "Warren", "value": 1, "width": 1}, {"from": "Ammanas", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Lorn", "to": "Genabackis", "value": 3, "width": 1}, {"from": "Lorn", "to": "Topper", "value": 1, "width": 1}, {"from": "Lorn", "to": "Tattersail", "value": 49, "width": 1}, {"from": "Lorn", "to": "Tayschrenn", "value": 32, "width": 1}, {"from": "Lorn", "to": "Antsy", "value": 1, "width": 1}, {"from": "Lorn", "to": "Shadowthrone", "value": 6, "width": 1}, {"from": "Lorn", "to": "Toc", "value": 5, "width": 1}, {"from": "Lorn", "to": "Warren", "value": 17, "width": 1}, {"from": "Lorn", "to": "Toc the Younger", "value": 1, "width": 1}, {"from": "Lorn", "to": "Dujek", "value": 41, "width": 1}, {"from": "Lorn", "to": "Onos T\u0027oolan", "value": 5, "width": 1}, {"from": "Lorn", "to": "Hairlock", "value": 4, "width": 1}, {"from": "Lorn", "to": "Brood", "value": 2, "width": 1}, {"from": "Lorn", "to": "K\u0027azz", "value": 1, "width": 1}, {"from": "Lorn", "to": "Sorry", "value": 1, "width": 1}, {"from": "Lorn", "to": "Logros", "value": 4, "width": 1}, {"from": "Lorn", "to": "Dancer", "value": 1, "width": 1}, {"from": "Lorn", "to": "Bellurdan", "value": 2, "width": 1}, {"from": "Lorn", "to": "Crone", "value": 2, "width": 1}, {"from": "Lorn", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Lorn", "to": "Anomander Rake", "value": 2, "width": 1}, {"from": "Lorn", "to": "Quick Ben", "value": 2, "width": 1}, {"from": "Lorn", "to": "Crokus", "value": 3, "width": 1}, {"from": "Lorn", "to": "Rake", "value": 2, "width": 1}, {"from": "Lorn", "to": "Coll", "value": 1, "width": 1}, {"from": "Lorn", "to": "Whiskeyjack", "value": 1, "width": 1}, {"from": "Lorn", "to": "Mallet", "value": 6, "width": 1}, {"from": "Lorn", "to": "Meese", "value": 4, "width": 1}, {"from": "Lorn", "to": "Baruk", "value": 1, "width": 1}, {"from": "Lorn", "to": "Circle Breaker", "value": 2, "width": 1}, {"from": "Lorn", "to": "Hedge", "value": 3, "width": 1}, {"from": "Lorn", "to": "Fiddler", "value": 3, "width": 1}, {"from": "Lorn", "to": "Kalam", "value": 3, "width": 1}, {"from": "Lorn", "to": "Fingers", "value": 1, "width": 1}, {"from": "Lorn", "to": "Eel", "value": 3, "width": 1}, {"from": "Genabackis", "to": "Onearm", "value": 1, "width": 1}, {"from": "Genabackis", "to": "Tattersail", "value": 2, "width": 1}, {"from": "Genabackis", "to": "Whiskeyjack", "value": 2, "width": 1}, {"from": "Genabackis", "to": "Kruppe", "value": 2, "width": 1}, {"from": "Genabackis", "to": "Dujek", "value": 1, "width": 1}, {"from": "Genabackis", "to": "Crokus", "value": 2, "width": 1}, {"from": "Genabackis", "to": "Kalam", "value": 2, "width": 1}, {"from": "Onearm", "to": "Sorry", "value": 1, "width": 1}, {"from": "Onearm", "to": "Tayschrenn", "value": 5, "width": 1}, {"from": "Onearm", "to": "Tattersail", "value": 1, "width": 1}, {"from": "Onearm", "to": "Dujek", "value": 4, "width": 1}, {"from": "Onearm", "to": "Kalam", "value": 1, "width": 1}, {"from": "Sorry", "to": "Quick Ben", "value": 19, "width": 1}, {"from": "Sorry", "to": "Whiskeyjack", "value": 10, "width": 1}, {"from": "Sorry", "to": "Kalam", "value": 17, "width": 1}, {"from": "Sorry", "to": "Hairlock", "value": 2, "width": 1}, {"from": "Sorry", "to": "Fiddler", "value": 2, "width": 1}, {"from": "Sorry", "to": "Tayschrenn", "value": 3, "width": 1}, {"from": "Sorry", "to": "Tattersail", "value": 5, "width": 1}, {"from": "Sorry", "to": "Dujek", "value": 2, "width": 1}, {"from": "Sorry", "to": "Mallet", "value": 9, "width": 1}, {"from": "Sorry", "to": "Trotts", "value": 2, "width": 1}, {"from": "Sorry", "to": "Hedge", "value": 1, "width": 1}, {"from": "Sorry", "to": "Gear", "value": 1, "width": 1}, {"from": "Sorry", "to": "Kruppe", "value": 6, "width": 1}, {"from": "Sorry", "to": "Meese", "value": 3, "width": 1}, {"from": "Sorry", "to": "Crokus", "value": 3, "width": 1}, {"from": "Sorry", "to": "Scurve", "value": 3, "width": 1}, {"from": "Sorry", "to": "Murillio", "value": 1, "width": 1}, {"from": "Sorry", "to": "Warren", "value": 2, "width": 1}, {"from": "Sorry", "to": "Shadowthrone", "value": 3, "width": 1}, {"from": "Sorry", "to": "Onos T\u0027oolan", "value": 1, "width": 1}, {"from": "Sorry", "to": "Raest", "value": 1, "width": 1}, {"from": "Warren", "to": "Topper", "value": 7, "width": 1}, {"from": "Warren", "to": "Tayschrenn", "value": 9, "width": 1}, {"from": "Warren", "to": "Tattersail", "value": 22, "width": 1}, {"from": "Warren", "to": "Quick Ben", "value": 21, "width": 1}, {"from": "Warren", "to": "Hairlock", "value": 13, "width": 1}, {"from": "Warren", "to": "Shadowthrone", "value": 8, "width": 1}, {"from": "Warren", "to": "Hedge", "value": 2, "width": 1}, {"from": "Warren", "to": "Kalam", "value": 3, "width": 1}, {"from": "Warren", "to": "Warren of Shadow", "value": 1, "width": 1}, {"from": "Warren", "to": "Fiddler", "value": 1, "width": 1}, {"from": "Warren", "to": "Gear", "value": 2, "width": 1}, {"from": "Warren", "to": "Baruk", "value": 11, "width": 1}, {"from": "Warren", "to": "Kruppe", "value": 6, "width": 1}, {"from": "Warren", "to": "Whiskeyjack", "value": 3, "width": 1}, {"from": "Warren", "to": "Bellurdan", "value": 6, "width": 1}, {"from": "Warren", "to": "Crone", "value": 8, "width": 1}, {"from": "Warren", "to": "Anomander Rake", "value": 1, "width": 1}, {"from": "Warren", "to": "Mammot", "value": 5, "width": 1}, {"from": "Warren", "to": "Murillio", "value": 1, "width": 1}, {"from": "Warren", "to": "Rake", "value": 1, "width": 1}, {"from": "Warren", "to": "Crokus", "value": 2, "width": 1}, {"from": "Warren", "to": "Serrat", "value": 1, "width": 1}, {"from": "Warren", "to": "Raest", "value": 1, "width": 1}, {"from": "Warren", "to": "Silanah", "value": 5, "width": 1}, {"from": "Warren", "to": "Vorcan", "value": 3, "width": 1}, {"from": "Warren", "to": "K\u0027rul", "value": 1, "width": 1}, {"from": "Warren", "to": "Derudan", "value": 2, "width": 1}, {"from": "Topper", "to": "Gamet", "value": 1, "width": 1}, {"from": "Topper", "to": "Hairlock", "value": 1, "width": 1}, {"from": "Topper", "to": "Whiskeyjack", "value": 2, "width": 1}, {"from": "Topper", "to": "Dujek Onearm", "value": 3, "width": 1}, {"from": "Topper", "to": "Dujek", "value": 1, "width": 1}, {"from": "Gamet", "to": "Tavore", "value": 1, "width": 1}, {"from": "Tavore", "to": "Felisin", "value": 3, "width": 1}, {"from": "Felisin", "to": "Tattersail", "value": 1, "width": 1}, {"from": "Felisin", "to": "Quick Ben", "value": 1, "width": 1}, {"from": "Felisin", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Hairlock", "value": 99, "width": 1}, {"from": "Tattersail", "to": "Tayschrenn", "value": 109, "width": 1}, {"from": "Tattersail", "to": "Whiskeyjack", "value": 35, "width": 1}, {"from": "Tattersail", "to": "Quick Ben", "value": 56, "width": 1}, {"from": "Tattersail", "to": "Hedge", "value": 2, "width": 1}, {"from": "Tattersail", "to": "Calot", "value": 30, "width": 1}, {"from": "Tattersail", "to": "Dujek", "value": 27, "width": 1}, {"from": "Tattersail", "to": "Dujek Onearm", "value": 4, "width": 1}, {"from": "Tattersail", "to": "Bellurdan", "value": 32, "width": 1}, {"from": "Tattersail", "to": "A\u0027Karonys", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Nightchill", "value": 5, "width": 1}, {"from": "Tattersail", "to": "Anomander Rake", "value": 2, "width": 1}, {"from": "Tattersail", "to": "Kalam", "value": 27, "width": 1}, {"from": "Tattersail", "to": "Dancer", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Shadowthrone", "value": 4, "width": 1}, {"from": "Tattersail", "to": "Fiddler", "value": 8, "width": 1}, {"from": "Tattersail", "to": "Kellanved", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Warren of Shadow", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Dassem Ultor", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Mallet", "value": 12, "width": 1}, {"from": "Tattersail", "to": "Picker", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Gear", "value": 5, "width": 1}, {"from": "Tattersail", "to": "Kruppe", "value": 6, "width": 1}, {"from": "Tattersail", "to": "Toc the Younger", "value": 2, "width": 1}, {"from": "Tattersail", "to": "Toc", "value": 9, "width": 1}, {"from": "Tattersail", "to": "Kallor", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Pran", "value": 2, "width": 1}, {"from": "Tattersail", "to": "Pran Chole", "value": 2, "width": 1}, {"from": "Tattersail", "to": "Irilta", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Coll", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Tayschrenn", "value": 33, "width": 1}, {"from": "Hairlock", "to": "Calot", "value": 17, "width": 1}, {"from": "Hairlock", "to": "Dujek", "value": 13, "width": 1}, {"from": "Hairlock", "to": "Fiddler", "value": 2, "width": 1}, {"from": "Hairlock", "to": "Bellurdan", "value": 5, "width": 1}, {"from": "Hairlock", "to": "Nightchill", "value": 2, "width": 1}, {"from": "Hairlock", "to": "Anomander Rake", "value": 2, "width": 1}, {"from": "Hairlock", "to": "Quick Ben", "value": 54, "width": 1}, {"from": "Hairlock", "to": "Kalam", "value": 15, "width": 1}, {"from": "Hairlock", "to": "Whiskeyjack", "value": 3, "width": 1}, {"from": "Hairlock", "to": "Gear", "value": 9, "width": 1}, {"from": "Hairlock", "to": "Shadowthrone", "value": 2, "width": 1}, {"from": "Hairlock", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Trotts", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Toc", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Onos T\u0027oolan", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Crokus", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Crone", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Hedge", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Calot", "value": 7, "width": 1}, {"from": "Tayschrenn", "to": "Dujek", "value": 26, "width": 1}, {"from": "Tayschrenn", "to": "Anomander Rake", "value": 3, "width": 1}, {"from": "Tayschrenn", "to": "Bellurdan", "value": 3, "width": 1}, {"from": "Tayschrenn", "to": "Nightchill", "value": 4, "width": 1}, {"from": "Tayschrenn", "to": "A\u0027Karonys", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Quick Ben", "value": 10, "width": 1}, {"from": "Tayschrenn", "to": "Kalam", "value": 13, "width": 1}, {"from": "Tayschrenn", "to": "Brood", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Fiddler", "value": 3, "width": 1}, {"from": "Tayschrenn", "to": "Rake", "value": 2, "width": 1}, {"from": "Tayschrenn", "to": "Baruk", "value": 4, "width": 1}, {"from": "Tayschrenn", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Dujek Onearm", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Serrat", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Mallet", "value": 2, "width": 1}, {"from": "Tayschrenn", "to": "Whiskeyjack", "value": 2, "width": 1}, {"from": "Tayschrenn", "to": "Kruppe", "value": 2, "width": 1}, {"from": "Tayschrenn", "to": "Orr", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Kallor", "value": 1, "width": 1}, {"from": "Whiskeyjack", "to": "Dujek", "value": 11, "width": 1}, {"from": "Whiskeyjack", "to": "Quick Ben", "value": 32, "width": 1}, {"from": "Whiskeyjack", "to": "Fiddler", "value": 21, "width": 1}, {"from": "Whiskeyjack", "to": "Kalam", "value": 12, "width": 1}, {"from": "Whiskeyjack", "to": "Ultor", "value": 1, "width": 1}, {"from": "Whiskeyjack", "to": "Shadowthrone", "value": 2, "width": 1}, {"from": "Whiskeyjack", "to": "Hedge", "value": 6, "width": 1}, {"from": "Whiskeyjack", "to": "Mallet", "value": 17, "width": 1}, {"from": "Whiskeyjack", "to": "Trotts", "value": 6, "width": 1}, {"from": "Whiskeyjack", "to": "Toc", "value": 3, "width": 1}, {"from": "Whiskeyjack", "to": "Rake", "value": 1, "width": 1}, {"from": "Whiskeyjack", "to": "Mammot", "value": 3, "width": 1}, {"from": "Whiskeyjack", "to": "Kallor", "value": 1, "width": 1}, {"from": "Whiskeyjack", "to": "Coll", "value": 2, "width": 1}, {"from": "Quick Ben", "to": "Quick", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Kalam", "value": 139, "width": 1}, {"from": "Quick Ben", "to": "Mallet", "value": 26, "width": 1}, {"from": "Quick Ben", "to": "Trotts", "value": 14, "width": 1}, {"from": "Quick Ben", "to": "Fiddler", "value": 11, "width": 1}, {"from": "Quick Ben", "to": "Shadowthrone", "value": 21, "width": 1}, {"from": "Quick Ben", "to": "Dujek", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Eel", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Crokus", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Kruppe", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Gear", "value": 2, "width": 1}, {"from": "Quick Ben", "to": "Blind", "value": 4, "width": 1}, {"from": "Quick Ben", "to": "Doan", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Rood", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Shan", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Rope", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Rallick", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Rallick Nom", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Ocelot", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Onos T\u0027oolan", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Hedge", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Stillis", "value": 2, "width": 1}, {"from": "Quick Ben", "to": "Baruk", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Mammot", "value": 10, "width": 1}, {"from": "Quick Ben", "to": "Derudan", "value": 2, "width": 1}, {"from": "Quick Ben", "to": "Crone", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Silanah", "value": 1, "width": 1}, {"from": "Fiddler", "to": "Hedge", "value": 39, "width": 1}, {"from": "Fiddler", "to": "Dujek", "value": 13, "width": 1}, {"from": "Fiddler", "to": "Kalam", "value": 21, "width": 1}, {"from": "Fiddler", "to": "Trotts", "value": 3, "width": 1}, {"from": "Fiddler", "to": "Mallet", "value": 18, "width": 1}, {"from": "Fiddler", "to": "Crokus", "value": 3, "width": 1}, {"from": "Fiddler", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Fiddler", "to": "Orr", "value": 1, "width": 1}, {"from": "Fiddler", "to": "Derudan", "value": 3, "width": 1}, {"from": "Fiddler", "to": "Coll", "value": 1, "width": 1}, {"from": "Hedge", "to": "Antsy", "value": 4, "width": 1}, {"from": "Hedge", "to": "Picker", "value": 3, "width": 1}, {"from": "Hedge", "to": "Mallet", "value": 18, "width": 1}, {"from": "Hedge", "to": "Trotts", "value": 5, "width": 1}, {"from": "Hedge", "to": "Kalam", "value": 19, "width": 1}, {"from": "Hedge", "to": "Mammot", "value": 2, "width": 1}, {"from": "Calot", "to": "Dujek", "value": 12, "width": 1}, {"from": "Calot", "to": "Bellurdan", "value": 2, "width": 1}, {"from": "Calot", "to": "Nightchill", "value": 2, "width": 1}, {"from": "Calot", "to": "Kalam", "value": 1, "width": 1}, {"from": "Calot", "to": "Dancer", "value": 1, "width": 1}, {"from": "Dujek", "to": "Dujek Onearm", "value": 2, "width": 1}, {"from": "Dujek", "to": "Kalam", "value": 6, "width": 1}, {"from": "Dujek", "to": "Mallet", "value": 3, "width": 1}, {"from": "Dujek", "to": "Brood", "value": 2, "width": 1}, {"from": "Dujek", "to": "Toc", "value": 2, "width": 1}, {"from": "Dujek", "to": "Kallor", "value": 1, "width": 1}, {"from": "Dujek", "to": "Coll", "value": 1, "width": 1}, {"from": "Dujek", "to": "Trotts", "value": 1, "width": 1}, {"from": "Brood", "to": "Ultor", "value": 1, "width": 1}, {"from": "Brood", "to": "Anomander Rake", "value": 3, "width": 1}, {"from": "Brood", "to": "Rake", "value": 5, "width": 1}, {"from": "Brood", "to": "Baruk", "value": 3, "width": 1}, {"from": "Brood", "to": "Crone", "value": 22, "width": 1}, {"from": "Brood", "to": "Jorrick Sharplance", "value": 3, "width": 1}, {"from": "Brood", "to": "Jorrick", "value": 3, "width": 1}, {"from": "Brood", "to": "K\u0027azz", "value": 3, "width": 1}, {"from": "Brood", "to": "Kallor", "value": 7, "width": 1}, {"from": "Brood", "to": "Toc", "value": 1, "width": 1}, {"from": "Brood", "to": "Serrat", "value": 2, "width": 1}, {"from": "Brood", "to": "Icarium", "value": 1, "width": 1}, {"from": "Brood", "to": "Mammot", "value": 1, "width": 1}, {"from": "Brood", "to": "Crokus", "value": 2, "width": 1}, {"from": "Anomander Rake", "to": "Baruk", "value": 21, "width": 1}, {"from": "Anomander Rake", "to": "Crone", "value": 2, "width": 1}, {"from": "Anomander Rake", "to": "Rallick", "value": 1, "width": 1}, {"from": "Anomander Rake", "to": "Serrat", "value": 5, "width": 1}, {"from": "Anomander Rake", "to": "Mallet", "value": 1, "width": 1}, {"from": "Anomander Rake", "to": "Shadowthrone", "value": 4, "width": 1}, {"from": "Anomander Rake", "to": "Rake", "value": 5, "width": 1}, {"from": "Anomander Rake", "to": "Coll", "value": 1, "width": 1}, {"from": "Anomander Rake", "to": "Orr", "value": 1, "width": 1}, {"from": "Anomander Rake", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Anomander Rake", "to": "K\u0027rul", "value": 2, "width": 1}, {"from": "Anomander Rake", "to": "Kalam", "value": 1, "width": 1}, {"from": "Anomander Rake", "to": "Crokus", "value": 1, "width": 1}, {"from": "Bellurdan", "to": "A\u0027Karonys", "value": 6, "width": 1}, {"from": "Bellurdan", "to": "Nightchill", "value": 8, "width": 1}, {"from": "Quick", "to": "Kalam", "value": 6, "width": 1}, {"from": "Kalam", "to": "Mallet", "value": 36, "width": 1}, {"from": "Kalam", "to": "Picker", "value": 2, "width": 1}, {"from": "Kalam", "to": "Antsy", "value": 1, "width": 1}, {"from": "Kalam", "to": "Baruk", "value": 5, "width": 1}, {"from": "Kalam", "to": "Trotts", "value": 4, "width": 1}, {"from": "Kalam", "to": "Meese", "value": 1, "width": 1}, {"from": "Kalam", "to": "Eel", "value": 1, "width": 1}, {"from": "Kalam", "to": "Murillio", "value": 1, "width": 1}, {"from": "Kalam", "to": "Kruppe", "value": 4, "width": 1}, {"from": "Kalam", "to": "D\u0027Arle", "value": 1, "width": 1}, {"from": "Kalam", "to": "Rallick Nom", "value": 2, "width": 1}, {"from": "Kalam", "to": "Nom", "value": 1, "width": 1}, {"from": "Kalam", "to": "Crokus", "value": 14, "width": 1}, {"from": "Kalam", "to": "K\u0027rul", "value": 1, "width": 1}, {"from": "Kalam", "to": "Ocelot", "value": 1, "width": 1}, {"from": "Kalam", "to": "Rake", "value": 1, "width": 1}, {"from": "Kalam", "to": "Scurve", "value": 5, "width": 1}, {"from": "Kalam", "to": "Coll", "value": 4, "width": 1}, {"from": "Kalam", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Kalam", "to": "Onos T\u0027oolan", "value": 1, "width": 1}, {"from": "Kalam", "to": "Vorcan", "value": 4, "width": 1}, {"from": "Kalam", "to": "Rallick", "value": 3, "width": 1}, {"from": "Kalam", "to": "Derudan", "value": 2, "width": 1}, {"from": "Mallet", "to": "Antsy", "value": 1, "width": 1}, {"from": "Mallet", "to": "Trotts", "value": 7, "width": 1}, {"from": "Mallet", "to": "Picker", "value": 3, "width": 1}, {"from": "Mallet", "to": "Crokus Younghand", "value": 1, "width": 1}, {"from": "Mallet", "to": "Coll", "value": 5, "width": 1}, {"from": "Mallet", "to": "Rallick", "value": 1, "width": 1}, {"from": "Mallet", "to": "Crokus", "value": 3, "width": 1}, {"from": "Mallet", "to": "Rope", "value": 2, "width": 1}, {"from": "Mallet", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Mallet", "to": "Eel", "value": 1, "width": 1}, {"from": "Trotts", "to": "Crokus", "value": 1, "width": 1}, {"from": "Trotts", "to": "Simtal", "value": 1, "width": 1}, {"from": "Dancer", "to": "Logros", "value": 1, "width": 1}, {"from": "Dancer", "to": "Horult", "value": 1, "width": 1}, {"from": "Dancer", "to": "Korlat", "value": 1, "width": 1}, {"from": "Shadowthrone", "to": "Picker", "value": 1, "width": 1}, {"from": "Shadowthrone", "to": "Gear", "value": 6, "width": 1}, {"from": "Shadowthrone", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Shadowthrone", "to": "Mammot", "value": 1, "width": 1}, {"from": "Shadowthrone", "to": "Shan", "value": 3, "width": 1}, {"from": "Shadowthrone", "to": "Rope", "value": 1, "width": 1}, {"from": "Shadowthrone", "to": "Doan", "value": 2, "width": 1}, {"from": "Shadowthrone", "to": "Rake", "value": 1, "width": 1}, {"from": "Antsy", "to": "Picker", "value": 3, "width": 1}, {"from": "Gear", "to": "Blind", "value": 2, "width": 1}, {"from": "Kruppe", "to": "D\u0027Arle", "value": 5, "width": 1}, {"from": "Kruppe", "to": "Rallick", "value": 57, "width": 1}, {"from": "Kruppe", "to": "Crokus Younghand", "value": 2, "width": 1}, {"from": "Kruppe", "to": "Crokus", "value": 122, "width": 1}, {"from": "Kruppe", "to": "Rallick Nom", "value": 6, "width": 1}, {"from": "Kruppe", "to": "Murillio", "value": 102, "width": 1}, {"from": "Kruppe", "to": "Coll", "value": 21, "width": 1}, {"from": "Kruppe", "to": "Sulty", "value": 4, "width": 1}, {"from": "Kruppe", "to": "Mammot", "value": 39, "width": 1}, {"from": "Kruppe", "to": "K\u0027rul", "value": 29, "width": 1}, {"from": "Kruppe", "to": "Circle Breaker", "value": 7, "width": 1}, {"from": "Kruppe", "to": "Orr", "value": 4, "width": 1}, {"from": "Kruppe", "to": "Krute of Talient", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Baruk", "value": 92, "width": 1}, {"from": "Kruppe", "to": "Vorcan", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Pran", "value": 12, "width": 1}, {"from": "Kruppe", "to": "Pran Chole", "value": 15, "width": 1}, {"from": "Kruppe", "to": "Irilta", "value": 4, "width": 1}, {"from": "Kruppe", "to": "Meese", "value": 10, "width": 1}, {"from": "Kruppe", "to": "Scurve", "value": 2, "width": 1}, {"from": "Kruppe", "to": "Chert", "value": 2, "width": 1}, {"from": "Kruppe", "to": "Silanah", "value": 2, "width": 1}, {"from": "Kruppe", "to": "Crone", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Eel", "value": 11, "width": 1}, {"from": "Kruppe", "to": "Ocelot", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Rake", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Nom", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Simtal", "value": 2, "width": 1}, {"from": "Kruppe", "to": "Turban Orr", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Derudan", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Raest", "value": 7, "width": 1}, {"from": "Kruppe", "to": "Korlat", "value": 1, "width": 1}, {"from": "D\u0027Arle", "to": "Crokus Younghand", "value": 2, "width": 1}, {"from": "D\u0027Arle", "to": "Crokus", "value": 9, "width": 1}, {"from": "D\u0027Arle", "to": "Talo Krafar", "value": 1, "width": 1}, {"from": "D\u0027Arle", "to": "Rallick", "value": 4, "width": 1}, {"from": "D\u0027Arle", "to": "Mammot", "value": 1, "width": 1}, {"from": "D\u0027Arle", "to": "Challice", "value": 1, "width": 1}, {"from": "D\u0027Arle", "to": "Estraysian D\u0027Arle", "value": 2, "width": 1}, {"from": "D\u0027Arle", "to": "Meese", "value": 1, "width": 1}, {"from": "D\u0027Arle", "to": "Estraysian", "value": 1, "width": 1}, {"from": "Crokus Younghand", "to": "Crokus", "value": 4, "width": 1}, {"from": "Crokus", "to": "Talo", "value": 4, "width": 1}, {"from": "Crokus", "to": "K\u0027rul", "value": 8, "width": 1}, {"from": "Crokus", "to": "Talo Krafar", "value": 1, "width": 1}, {"from": "Crokus", "to": "Sulty", "value": 2, "width": 1}, {"from": "Crokus", "to": "Crone", "value": 1, "width": 1}, {"from": "Crokus", "to": "Murillio", "value": 15, "width": 1}, {"from": "Crokus", "to": "Rallick", "value": 37, "width": 1}, {"from": "Crokus", "to": "Coll", "value": 41, "width": 1}, {"from": "Crokus", "to": "Mammot", "value": 48, "width": 1}, {"from": "Crokus", "to": "Turban Orr", "value": 2, "width": 1}, {"from": "Crokus", "to": "Orr", "value": 2, "width": 1}, {"from": "Crokus", "to": "Rallick Nom", "value": 8, "width": 1}, {"from": "Crokus", "to": "Nom", "value": 4, "width": 1}, {"from": "Crokus", "to": "Baruk", "value": 32, "width": 1}, {"from": "Crokus", "to": "Chert", "value": 7, "width": 1}, {"from": "Crokus", "to": "Meese", "value": 29, "width": 1}, {"from": "Crokus", "to": "Scurve", "value": 3, "width": 1}, {"from": "Crokus", "to": "Challice D\u0027Arle", "value": 11, "width": 1}, {"from": "Crokus", "to": "Challice", "value": 6, "width": 1}, {"from": "Crokus", "to": "Estraysian D\u0027Arle", "value": 1, "width": 1}, {"from": "Crokus", "to": "Irilta", "value": 12, "width": 1}, {"from": "Crokus", "to": "Serrat", "value": 4, "width": 1}, {"from": "Crokus", "to": "Raest", "value": 1, "width": 1}, {"from": "Crokus", "to": "Circle Breaker", "value": 4, "width": 1}, {"from": "Crokus", "to": "Simtal", "value": 4, "width": 1}, {"from": "Crokus", "to": "Vorcan", "value": 9, "width": 1}, {"from": "Crokus", "to": "Cowl", "value": 1, "width": 1}, {"from": "Crokus", "to": "Fingers", "value": 4, "width": 1}, {"from": "Crokus", "to": "Rake", "value": 5, "width": 1}, {"from": "Crokus", "to": "Travale", "value": 1, "width": 1}, {"from": "Crokus", "to": "Derudan", "value": 5, "width": 1}, {"from": "Crokus", "to": "Korlat", "value": 1, "width": 1}, {"from": "Talo Krafar", "to": "Talo", "value": 2, "width": 1}, {"from": "Talo Krafar", "to": "Rallick", "value": 2, "width": 1}, {"from": "Talo", "to": "Vorcan", "value": 2, "width": 1}, {"from": "Vorcan", "to": "Rallick", "value": 25, "width": 1}, {"from": "Vorcan", "to": "Ocelot", "value": 6, "width": 1}, {"from": "Vorcan", "to": "Nom", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Simtal", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Lim", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Baruk", "value": 29, "width": 1}, {"from": "Vorcan", "to": "Murillio", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Rake", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Rallick Nom", "value": 3, "width": 1}, {"from": "Vorcan", "to": "Turban Orr", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Silanah", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Derudan", "value": 7, "width": 1}, {"from": "Vorcan", "to": "Mammot", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Serrat", "value": 1, "width": 1}, {"from": "K\u0027rul", "to": "Pran", "value": 2, "width": 1}, {"from": "K\u0027rul", "to": "Ocelot", "value": 1, "width": 1}, {"from": "K\u0027rul", "to": "Raest", "value": 3, "width": 1}, {"from": "K\u0027rul", "to": "Baruk", "value": 1, "width": 1}, {"from": "K\u0027rul", "to": "Silanah", "value": 1, "width": 1}, {"from": "K\u0027rul", "to": "Rake", "value": 1, "width": 1}, {"from": "Sulty", "to": "Coll", "value": 5, "width": 1}, {"from": "Sulty", "to": "Rallick", "value": 3, "width": 1}, {"from": "Sulty", "to": "Meese", "value": 1, "width": 1}, {"from": "Sulty", "to": "Scurve", "value": 1, "width": 1}, {"from": "Crone", "to": "Turban Orr", "value": 3, "width": 1}, {"from": "Crone", "to": "Baruk", "value": 43, "width": 1}, {"from": "Crone", "to": "Orr", "value": 3, "width": 1}, {"from": "Crone", "to": "Rallick Nom", "value": 1, "width": 1}, {"from": "Crone", "to": "Rallick", "value": 1, "width": 1}, {"from": "Crone", "to": "Logros", "value": 1, "width": 1}, {"from": "Crone", "to": "Kallor", "value": 1, "width": 1}, {"from": "Crone", "to": "K\u0027azz", "value": 1, "width": 1}, {"from": "Crone", "to": "Rake", "value": 5, "width": 1}, {"from": "Crone", "to": "Raest", "value": 1, "width": 1}, {"from": "Crone", "to": "Silanah", "value": 5, "width": 1}, {"from": "Turban Orr", "to": "Orr", "value": 5, "width": 1}, {"from": "Turban Orr", "to": "Baruk", "value": 12, "width": 1}, {"from": "Turban Orr", "to": "Eel", "value": 6, "width": 1}, {"from": "Turban Orr", "to": "Rallick", "value": 14, "width": 1}, {"from": "Turban Orr", "to": "Circle Breaker", "value": 2, "width": 1}, {"from": "Turban Orr", "to": "Simtal", "value": 9, "width": 1}, {"from": "Turban Orr", "to": "Turban", "value": 2, "width": 1}, {"from": "Turban Orr", "to": "Murillio", "value": 2, "width": 1}, {"from": "Turban Orr", "to": "Lim", "value": 1, "width": 1}, {"from": "Turban Orr", "to": "Rallick Nom", "value": 4, "width": 1}, {"from": "Turban Orr", "to": "Estraysian", "value": 2, "width": 1}, {"from": "Turban Orr", "to": "Rake", "value": 1, "width": 1}, {"from": "Turban Orr", "to": "Estraysian D\u0027Arle", "value": 3, "width": 1}, {"from": "Orr", "to": "Circle Breaker", "value": 1, "width": 1}, {"from": "Orr", "to": "Baruk", "value": 13, "width": 1}, {"from": "Orr", "to": "Simtal", "value": 2, "width": 1}, {"from": "Orr", "to": "Rallick", "value": 10, "width": 1}, {"from": "Orr", "to": "Murillio", "value": 1, "width": 1}, {"from": "Orr", "to": "Turban", "value": 1, "width": 1}, {"from": "Orr", "to": "Rallick Nom", "value": 2, "width": 1}, {"from": "Orr", "to": "Estraysian D\u0027Arle", "value": 1, "width": 1}, {"from": "Orr", "to": "Ocelot", "value": 1, "width": 1}, {"from": "Circle Breaker", "to": "Baruk", "value": 6, "width": 1}, {"from": "Circle Breaker", "to": "Eel", "value": 21, "width": 1}, {"from": "Circle Breaker", "to": "Mammot", "value": 1, "width": 1}, {"from": "Circle Breaker", "to": "Meese", "value": 3, "width": 1}, {"from": "Circle Breaker", "to": "Murillio", "value": 2, "width": 1}, {"from": "Circle Breaker", "to": "Rallick", "value": 2, "width": 1}, {"from": "Circle Breaker", "to": "Stillis", "value": 2, "width": 1}, {"from": "Circle Breaker", "to": "Raest", "value": 1, "width": 1}, {"from": "Baruk", "to": "Eel", "value": 8, "width": 1}, {"from": "Baruk", "to": "Rallick Nom", "value": 3, "width": 1}, {"from": "Baruk", "to": "Rake", "value": 34, "width": 1}, {"from": "Baruk", "to": "Rallick", "value": 31, "width": 1}, {"from": "Baruk", "to": "Murillio", "value": 6, "width": 1}, {"from": "Baruk", "to": "Coll", "value": 3, "width": 1}, {"from": "Baruk", "to": "Mammot", "value": 32, "width": 1}, {"from": "Baruk", "to": "Ocelot", "value": 2, "width": 1}, {"from": "Baruk", "to": "Icarium", "value": 3, "width": 1}, {"from": "Baruk", "to": "Turban", "value": 2, "width": 1}, {"from": "Baruk", "to": "Simtal", "value": 3, "width": 1}, {"from": "Baruk", "to": "Estraysian D\u0027Arle", "value": 6, "width": 1}, {"from": "Baruk", "to": "Estraysian", "value": 1, "width": 1}, {"from": "Baruk", "to": "Derudan", "value": 25, "width": 1}, {"from": "Eel", "to": "Turban", "value": 2, "width": 1}, {"from": "Eel", "to": "Lim", "value": 1, "width": 1}, {"from": "Eel", "to": "Rallick", "value": 6, "width": 1}, {"from": "Eel", "to": "Murillio", "value": 1, "width": 1}, {"from": "Eel", "to": "Ocelot", "value": 1, "width": 1}, {"from": "Eel", "to": "Irilta", "value": 4, "width": 1}, {"from": "Eel", "to": "Meese", "value": 3, "width": 1}, {"from": "Eel", "to": "Rake", "value": 1, "width": 1}, {"from": "Eel", "to": "Mammot", "value": 1, "width": 1}, {"from": "Rallick Nom", "to": "Rallick", "value": 14, "width": 1}, {"from": "Rallick Nom", "to": "Murillio", "value": 4, "width": 1}, {"from": "Rallick Nom", "to": "Meese", "value": 2, "width": 1}, {"from": "Rallick Nom", "to": "Mammot", "value": 1, "width": 1}, {"from": "Rallick Nom", "to": "Ocelot", "value": 5, "width": 1}, {"from": "Rallick Nom", "to": "Coll", "value": 1, "width": 1}, {"from": "Rallick Nom", "to": "Simtal", "value": 1, "width": 1}, {"from": "Rallick", "to": "Lim", "value": 8, "width": 1}, {"from": "Rallick", "to": "Nom", "value": 16, "width": 1}, {"from": "Rallick", "to": "Ocelot", "value": 64, "width": 1}, {"from": "Rallick", "to": "Murillio", "value": 53, "width": 1}, {"from": "Rallick", "to": "Coll", "value": 12, "width": 1}, {"from": "Rallick", "to": "Mammot", "value": 3, "width": 1}, {"from": "Rallick", "to": "Scurve", "value": 2, "width": 1}, {"from": "Rallick", "to": "Meese", "value": 6, "width": 1}, {"from": "Rallick", "to": "Vildron", "value": 1, "width": 1}, {"from": "Rallick", "to": "Simtal", "value": 6, "width": 1}, {"from": "Rallick", "to": "Estraysian D\u0027Arle", "value": 2, "width": 1}, {"from": "Rallick", "to": "Rake", "value": 1, "width": 1}, {"from": "Rallick", "to": "Raest", "value": 1, "width": 1}, {"from": "Rallick", "to": "Derudan", "value": 3, "width": 1}, {"from": "Rallick", "to": "Korlat", "value": 2, "width": 1}, {"from": "Rallick", "to": "Serrat", "value": 2, "width": 1}, {"from": "Lim", "to": "Simtal", "value": 3, "width": 1}, {"from": "Lim", "to": "Turban", "value": 1, "width": 1}, {"from": "Lim", "to": "Coll", "value": 1, "width": 1}, {"from": "Simtal", "to": "Turban", "value": 3, "width": 1}, {"from": "Simtal", "to": "Murillio", "value": 4, "width": 1}, {"from": "Simtal", "to": "Mammot", "value": 1, "width": 1}, {"from": "Nom", "to": "Ocelot", "value": 8, "width": 1}, {"from": "Nom", "to": "Meese", "value": 4, "width": 1}, {"from": "Nom", "to": "Irilta", "value": 1, "width": 1}, {"from": "Ocelot", "to": "Murillio", "value": 8, "width": 1}, {"from": "Ocelot", "to": "Scurve", "value": 1, "width": 1}, {"from": "Ocelot", "to": "Coll", "value": 6, "width": 1}, {"from": "Ocelot", "to": "Vildron", "value": 1, "width": 1}, {"from": "Rake", "to": "Serrat", "value": 2, "width": 1}, {"from": "Rake", "to": "Murillio", "value": 1, "width": 1}, {"from": "Rake", "to": "Mammot", "value": 4, "width": 1}, {"from": "Rake", "to": "Scurve", "value": 1, "width": 1}, {"from": "Rake", "to": "Estraysian D\u0027Arle", "value": 2, "width": 1}, {"from": "Rake", "to": "Derudan", "value": 2, "width": 1}, {"from": "Murillio", "to": "Coll", "value": 6, "width": 1}, {"from": "Murillio", "to": "Krute", "value": 9, "width": 1}, {"from": "Murillio", "to": "Mammot", "value": 6, "width": 1}, {"from": "Murillio", "to": "Chert", "value": 1, "width": 1}, {"from": "Murillio", "to": "Serrat", "value": 1, "width": 1}, {"from": "Murillio", "to": "Scurve", "value": 1, "width": 1}, {"from": "Coll", "to": "Chert", "value": 2, "width": 1}, {"from": "Coll", "to": "Vildron", "value": 4, "width": 1}, {"from": "Coll", "to": "Serrat", "value": 1, "width": 1}, {"from": "Coll", "to": "Irilta", "value": 2, "width": 1}, {"from": "Coll", "to": "Meese", "value": 1, "width": 1}, {"from": "Coll", "to": "Scurve", "value": 2, "width": 1}, {"from": "Coll", "to": "Turban", "value": 1, "width": 1}, {"from": "Mammot", "to": "Meese", "value": 3, "width": 1}, {"from": "Mammot", "to": "Icarium", "value": 3, "width": 1}, {"from": "Mammot", "to": "Irilta", "value": 1, "width": 1}, {"from": "Mammot", "to": "Derudan", "value": 2, "width": 1}, {"from": "Krute of Talient", "to": "Krute", "value": 1, "width": 1}, {"from": "Toc", "to": "Toc the Younger", "value": 1, "width": 1}, {"from": "Kallor", "to": "Jorrick Sharplance", "value": 2, "width": 1}, {"from": "Kallor", "to": "Jorrick", "value": 1, "width": 1}, {"from": "Jorrick Sharplance", "to": "Jorrick", "value": 1, "width": 1}, {"from": "Pran", "to": "Pran Chole", "value": 2, "width": 1}, {"from": "Irilta", "to": "Meese", "value": 26, "width": 1}, {"from": "Irilta", "to": "Chert", "value": 1, "width": 1}, {"from": "Meese", "to": "Scurve", "value": 4, "width": 1}, {"from": "Meese", "to": "Chert", "value": 3, "width": 1}, {"from": "Meese", "to": "Challice", "value": 1, "width": 1}, {"from": "Meese", "to": "Challice D\u0027Arle", "value": 1, "width": 1}, {"from": "Meese", "to": "Serrat", "value": 2, "width": 1}, {"from": "Silanah", "to": "Raest", "value": 7, "width": 1}, {"from": "Baran", "to": "Blind", "value": 3, "width": 1}, {"from": "Baran", "to": "Shan", "value": 1, "width": 1}, {"from": "Blind", "to": "Shan", "value": 1, "width": 1}, {"from": "Blind", "to": "Doan", "value": 1, "width": 1}, {"from": "Doan", "to": "Rood", "value": 1, "width": 1}, {"from": "Serrat", "to": "Cowl", "value": 1, "width": 1}, {"from": "Derudan", "to": "Travale", "value": 1, "width": 1}, {"from": "Korlat", "to": "Horult", "value": 2, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "cubicBezier"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.01,
+            "damping": 0.4,
+            "gravitationalConstant": -50,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

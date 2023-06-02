@@ -1,0 +1,358 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 1000px;
+                 height: 700px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"font": {"color": "white"}, "group": 0, "id": "Caladan Brood", "label": "Caladan Brood", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 0, "id": "K\u0027azz D\u0027Avore", "label": "K\u0027azz D\u0027Avore", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Calot", "label": "Calot", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Dujek", "label": "Dujek", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 0, "id": "Anomander Rake", "label": "Anomander Rake", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Kallor", "label": "Kallor", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Rake", "label": "Rake", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Hairlock", "label": "Hairlock", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Tayschrenn", "label": "Tayschrenn", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Tattersail", "label": "Tattersail", "shape": "dot", "size": 11}, {"font": {"color": "white"}, "group": 2, "id": "Quick Ben", "label": "Quick Ben", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 2, "id": "Kalam", "label": "Kalam", "shape": "dot", "size": 8}, {"font": {"color": "white"}, "group": 1, "id": "Warren", "label": "Warren", "shape": "dot", "size": 9}, {"font": {"color": "white"}, "group": 1, "id": "Gear", "label": "Gear", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Bellurdan", "label": "Bellurdan", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Onearm", "label": "Onearm", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Lorn", "label": "Lorn", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 2, "id": "Whiskeyjack", "label": "Whiskeyjack", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "Toc", "label": "Toc", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Mallet", "label": "Mallet", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 1, "id": "Pran", "label": "Pran", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Kruppe", "label": "Kruppe", "shape": "dot", "size": 30}, {"font": {"color": "white"}, "group": 2, "id": "Fiddler", "label": "Fiddler", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Hedge", "label": "Hedge", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Sorry", "label": "Sorry", "shape": "dot", "size": 4}, {"font": {"color": "white"}, "group": 2, "id": "Picker", "label": "Picker", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Trotts", "label": "Trotts", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Simtal", "label": "Simtal", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Baruk", "label": "Baruk", "shape": "dot", "size": 11}, {"font": {"color": "white"}, "group": 1, "id": "A\u0027Karonys", "label": "A\u0027Karonys", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Nightchill", "label": "Nightchill", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Crokus", "label": "Crokus", "shape": "dot", "size": 20}, {"font": {"color": "white"}, "group": 2, "id": "Shadowthrone", "label": "Shadowthrone", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Mammot", "label": "Mammot", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Quick", "label": "Quick", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Scurve", "label": "Scurve", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 2, "id": "Seer", "label": "Seer", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Laseen", "label": "Laseen", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Surly", "label": "Surly", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Meese", "label": "Meese", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Antsy", "label": "Antsy", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Silanah", "label": "Silanah", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Vorcan", "label": "Vorcan", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 1, "id": "Blind", "label": "Blind", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 2, "id": "Ammanas", "label": "Ammanas", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Sulty", "label": "Sulty", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Murillio", "label": "Murillio", "shape": "dot", "size": 2}, {"font": {"color": "white"}, "group": 5, "id": "Coll", "label": "Coll", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Chert", "label": "Chert", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Rallick Nom", "label": "Rallick Nom", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Nom", "label": "Nom", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Rallick", "label": "Rallick", "shape": "dot", "size": 20}, {"font": {"color": "white"}, "group": 5, "id": "Irilta", "label": "Irilta", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Challice D\u0027Arle", "label": "Challice D\u0027Arle", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Challice", "label": "Challice", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Derudan", "label": "Derudan", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Circle Breaker", "label": "Circle Breaker", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Eel", "label": "Eel", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Crone", "label": "Crone", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Orr", "label": "Orr", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Turban Orr", "label": "Turban Orr", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 3, "id": "Estraysian D\u0027Arle", "label": "Estraysian D\u0027Arle", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Ocelot", "label": "Ocelot", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 5, "id": "Talo Krafar", "label": "Talo Krafar", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "K\u0027rul", "label": "K\u0027rul", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "D\u0027Arle", "label": "D\u0027Arle", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Lim", "label": "Lim", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Korlat", "label": "Korlat", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Serrat", "label": "Serrat", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Brood", "label": "Brood", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Jorrick", "label": "Jorrick", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 0, "id": "Jorrick Sharplance", "label": "Jorrick Sharplance", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Pran Chole", "label": "Pran Chole", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Raest", "label": "Raest", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Turban", "label": "Turban", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 3, "id": "Icarium", "label": "Icarium", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Onos T\u0027oolan", "label": "Onos T\u0027oolan", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 1, "id": "Baran", "label": "Baran", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 4, "id": "Doan", "label": "Doan", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 4, "id": "Rood", "label": "Rood", "shape": "dot", "size": 0}, {"font": {"color": "white"}, "group": 5, "id": "Horult", "label": "Horult", "shape": "dot", "size": 0}]);
+                  edges = new vis.DataSet([{"from": "Caladan Brood", "to": "K\u0027azz D\u0027Avore", "value": 1, "width": 1}, {"from": "Caladan Brood", "to": "Calot", "value": 2, "width": 1}, {"from": "Caladan Brood", "to": "Dujek", "value": 3, "width": 1}, {"from": "Caladan Brood", "to": "Anomander Rake", "value": 1, "width": 1}, {"from": "Caladan Brood", "to": "Kallor", "value": 2, "width": 1}, {"from": "Caladan Brood", "to": "Rake", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Tayschrenn", "value": 9, "width": 1}, {"from": "Hairlock", "to": "Tattersail", "value": 10, "width": 1}, {"from": "Hairlock", "to": "Dujek", "value": 2, "width": 1}, {"from": "Hairlock", "to": "Calot", "value": 2, "width": 1}, {"from": "Hairlock", "to": "Quick Ben", "value": 10, "width": 1}, {"from": "Hairlock", "to": "Kalam", "value": 1, "width": 1}, {"from": "Hairlock", "to": "Warren", "value": 3, "width": 1}, {"from": "Hairlock", "to": "Gear", "value": 2, "width": 1}, {"from": "Tayschrenn", "to": "Dujek", "value": 9, "width": 1}, {"from": "Tayschrenn", "to": "Tattersail", "value": 11, "width": 1}, {"from": "Tayschrenn", "to": "Bellurdan", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Calot", "value": 1, "width": 1}, {"from": "Tayschrenn", "to": "Onearm", "value": 2, "width": 1}, {"from": "Tayschrenn", "to": "Quick Ben", "value": 2, "width": 1}, {"from": "Tayschrenn", "to": "Lorn", "value": 4, "width": 1}, {"from": "Tattersail", "to": "Calot", "value": 5, "width": 1}, {"from": "Tattersail", "to": "Dujek", "value": 5, "width": 1}, {"from": "Tattersail", "to": "Kalam", "value": 3, "width": 1}, {"from": "Tattersail", "to": "Quick Ben", "value": 7, "width": 1}, {"from": "Tattersail", "to": "Bellurdan", "value": 5, "width": 1}, {"from": "Tattersail", "to": "Whiskeyjack", "value": 3, "width": 1}, {"from": "Tattersail", "to": "Warren", "value": 2, "width": 1}, {"from": "Tattersail", "to": "Lorn", "value": 7, "width": 1}, {"from": "Tattersail", "to": "Toc", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Mallet", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Pran", "value": 1, "width": 1}, {"from": "Tattersail", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Fiddler", "to": "Hedge", "value": 14, "width": 1}, {"from": "Fiddler", "to": "Kalam", "value": 5, "width": 1}, {"from": "Fiddler", "to": "Sorry", "value": 2, "width": 1}, {"from": "Fiddler", "to": "Whiskeyjack", "value": 3, "width": 1}, {"from": "Fiddler", "to": "Dujek", "value": 2, "width": 1}, {"from": "Fiddler", "to": "Mallet", "value": 2, "width": 1}, {"from": "Hedge", "to": "Picker", "value": 1, "width": 1}, {"from": "Hedge", "to": "Mallet", "value": 5, "width": 1}, {"from": "Hedge", "to": "Trotts", "value": 3, "width": 1}, {"from": "Dujek", "to": "Calot", "value": 2, "width": 1}, {"from": "Dujek", "to": "Kalam", "value": 1, "width": 1}, {"from": "Dujek", "to": "Lorn", "value": 2, "width": 1}, {"from": "Dujek", "to": "Whiskeyjack", "value": 2, "width": 1}, {"from": "Anomander Rake", "to": "Simtal", "value": 1, "width": 1}, {"from": "Anomander Rake", "to": "Baruk", "value": 2, "width": 1}, {"from": "Anomander Rake", "to": "Warren", "value": 1, "width": 1}, {"from": "A\u0027Karonys", "to": "Bellurdan", "value": 2, "width": 1}, {"from": "Bellurdan", "to": "Nightchill", "value": 4, "width": 1}, {"from": "Bellurdan", "to": "Lorn", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Whiskeyjack", "value": 6, "width": 1}, {"from": "Quick Ben", "to": "Kalam", "value": 30, "width": 1}, {"from": "Quick Ben", "to": "Sorry", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Warren", "value": 3, "width": 1}, {"from": "Quick Ben", "to": "Crokus", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Mallet", "value": 5, "width": 1}, {"from": "Quick Ben", "to": "Trotts", "value": 2, "width": 1}, {"from": "Quick Ben", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Quick Ben", "to": "Mammot", "value": 1, "width": 1}, {"from": "Kalam", "to": "Mallet", "value": 7, "width": 1}, {"from": "Kalam", "to": "Quick", "value": 1, "width": 1}, {"from": "Kalam", "to": "Sorry", "value": 1, "width": 1}, {"from": "Kalam", "to": "Whiskeyjack", "value": 4, "width": 1}, {"from": "Kalam", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Kalam", "to": "Scurve", "value": 1, "width": 1}, {"from": "Kalam", "to": "Warren", "value": 1, "width": 1}, {"from": "Whiskeyjack", "to": "Sorry", "value": 1, "width": 1}, {"from": "Whiskeyjack", "to": "Lorn", "value": 1, "width": 1}, {"from": "Whiskeyjack", "to": "Mallet", "value": 2, "width": 1}, {"from": "Whiskeyjack", "to": "Seer", "value": 1, "width": 1}, {"from": "Mallet", "to": "Trotts", "value": 3, "width": 1}, {"from": "Mallet", "to": "Picker", "value": 1, "width": 1}, {"from": "Mallet", "to": "Sorry", "value": 1, "width": 1}, {"from": "Laseen", "to": "Surly", "value": 1, "width": 1}, {"from": "Laseen", "to": "Warren", "value": 1, "width": 1}, {"from": "Laseen", "to": "Lorn", "value": 2, "width": 1}, {"from": "Sorry", "to": "Seer", "value": 1, "width": 1}, {"from": "Sorry", "to": "Meese", "value": 1, "width": 1}, {"from": "Sorry", "to": "Scurve", "value": 1, "width": 1}, {"from": "Sorry", "to": "Shadowthrone", "value": 2, "width": 1}, {"from": "Picker", "to": "Antsy", "value": 1, "width": 1}, {"from": "Warren", "to": "Gear", "value": 1, "width": 1}, {"from": "Warren", "to": "Baruk", "value": 1, "width": 1}, {"from": "Warren", "to": "Mammot", "value": 2, "width": 1}, {"from": "Warren", "to": "Shadowthrone", "value": 1, "width": 1}, {"from": "Warren", "to": "Lorn", "value": 1, "width": 1}, {"from": "Warren", "to": "Silanah", "value": 1, "width": 1}, {"from": "Warren", "to": "Vorcan", "value": 1, "width": 1}, {"from": "Gear", "to": "Shadowthrone", "value": 2, "width": 1}, {"from": "Gear", "to": "Blind", "value": 1, "width": 1}, {"from": "Shadowthrone", "to": "Ammanas", "value": 1, "width": 1}, {"from": "Crokus", "to": "Sulty", "value": 1, "width": 1}, {"from": "Crokus", "to": "Kruppe", "value": 23, "width": 1}, {"from": "Crokus", "to": "Murillio", "value": 5, "width": 1}, {"from": "Crokus", "to": "Coll", "value": 5, "width": 1}, {"from": "Crokus", "to": "Baruk", "value": 6, "width": 1}, {"from": "Crokus", "to": "Mammot", "value": 3, "width": 1}, {"from": "Crokus", "to": "Meese", "value": 7, "width": 1}, {"from": "Crokus", "to": "Scurve", "value": 1, "width": 1}, {"from": "Crokus", "to": "Chert", "value": 3, "width": 1}, {"from": "Crokus", "to": "Rallick Nom", "value": 1, "width": 1}, {"from": "Crokus", "to": "Nom", "value": 1, "width": 1}, {"from": "Crokus", "to": "Lorn", "value": 1, "width": 1}, {"from": "Crokus", "to": "Rallick", "value": 3, "width": 1}, {"from": "Crokus", "to": "Irilta", "value": 3, "width": 1}, {"from": "Crokus", "to": "Challice D\u0027Arle", "value": 1, "width": 1}, {"from": "Crokus", "to": "Challice", "value": 2, "width": 1}, {"from": "Crokus", "to": "Rake", "value": 1, "width": 1}, {"from": "Crokus", "to": "Derudan", "value": 1, "width": 1}, {"from": "Sulty", "to": "Rallick", "value": 1, "width": 1}, {"from": "Circle Breaker", "to": "Eel", "value": 3, "width": 1}, {"from": "Circle Breaker", "to": "Kruppe", "value": 2, "width": 1}, {"from": "Circle Breaker", "to": "Rallick", "value": 1, "width": 1}, {"from": "Eel", "to": "Kruppe", "value": 3, "width": 1}, {"from": "Eel", "to": "Rallick Nom", "value": 1, "width": 1}, {"from": "Eel", "to": "Baruk", "value": 1, "width": 1}, {"from": "Eel", "to": "Meese", "value": 1, "width": 1}, {"from": "Baruk", "to": "Crone", "value": 4, "width": 1}, {"from": "Baruk", "to": "Orr", "value": 4, "width": 1}, {"from": "Baruk", "to": "Kruppe", "value": 16, "width": 1}, {"from": "Baruk", "to": "Rake", "value": 4, "width": 1}, {"from": "Baruk", "to": "Mammot", "value": 4, "width": 1}, {"from": "Baruk", "to": "Rallick", "value": 3, "width": 1}, {"from": "Baruk", "to": "Turban Orr", "value": 1, "width": 1}, {"from": "Baruk", "to": "Estraysian D\u0027Arle", "value": 2, "width": 1}, {"from": "Baruk", "to": "Derudan", "value": 3, "width": 1}, {"from": "Baruk", "to": "Vorcan", "value": 5, "width": 1}, {"from": "Crone", "to": "Turban Orr", "value": 1, "width": 1}, {"from": "Turban Orr", "to": "Murillio", "value": 1, "width": 1}, {"from": "Turban Orr", "to": "Estraysian D\u0027Arle", "value": 1, "width": 1}, {"from": "Turban Orr", "to": "Rallick", "value": 1, "width": 1}, {"from": "Orr", "to": "Simtal", "value": 1, "width": 1}, {"from": "Orr", "to": "Kruppe", "value": 1, "width": 1}, {"from": "Orr", "to": "Rallick Nom", "value": 1, "width": 1}, {"from": "Orr", "to": "Rallick", "value": 1, "width": 1}, {"from": "Ocelot", "to": "Talo Krafar", "value": 1, "width": 1}, {"from": "Ocelot", "to": "Rallick", "value": 17, "width": 1}, {"from": "Ocelot", "to": "Murillio", "value": 2, "width": 1}, {"from": "Ocelot", "to": "Vorcan", "value": 1, "width": 1}, {"from": "Ocelot", "to": "K\u0027rul", "value": 1, "width": 1}, {"from": "Rallick", "to": "Murillio", "value": 11, "width": 1}, {"from": "Rallick", "to": "Kruppe", "value": 12, "width": 1}, {"from": "Rallick", "to": "Nom", "value": 2, "width": 1}, {"from": "Rallick", "to": "Mammot", "value": 1, "width": 1}, {"from": "Rallick", "to": "Scurve", "value": 1, "width": 1}, {"from": "Rallick", "to": "Vorcan", "value": 2, "width": 1}, {"from": "Rallick", "to": "Coll", "value": 3, "width": 1}, {"from": "Rallick", "to": "Simtal", "value": 2, "width": 1}, {"from": "Rallick", "to": "D\u0027Arle", "value": 1, "width": 1}, {"from": "Rallick", "to": "Lim", "value": 1, "width": 1}, {"from": "Rallick", "to": "Korlat", "value": 1, "width": 1}, {"from": "Rallick", "to": "Serrat", "value": 1, "width": 1}, {"from": "Brood", "to": "Rake", "value": 2, "width": 1}, {"from": "Brood", "to": "Jorrick", "value": 1, "width": 1}, {"from": "Brood", "to": "Jorrick Sharplance", "value": 1, "width": 1}, {"from": "Kruppe", "to": "K\u0027rul", "value": 5, "width": 1}, {"from": "Kruppe", "to": "Murillio", "value": 24, "width": 1}, {"from": "Kruppe", "to": "Pran", "value": 2, "width": 1}, {"from": "Kruppe", "to": "Pran Chole", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Chert", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Mammot", "value": 7, "width": 1}, {"from": "Kruppe", "to": "Silanah", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Rallick Nom", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Coll", "value": 2, "width": 1}, {"from": "Kruppe", "to": "Scurve", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Simtal", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Irilta", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Meese", "value": 1, "width": 1}, {"from": "Kruppe", "to": "Raest", "value": 2, "width": 1}, {"from": "Murillio", "to": "Coll", "value": 2, "width": 1}, {"from": "Simtal", "to": "Turban", "value": 1, "width": 1}, {"from": "Nom", "to": "Vorcan", "value": 2, "width": 1}, {"from": "Mammot", "to": "Icarium", "value": 1, "width": 1}, {"from": "Lorn", "to": "Onos T\u0027oolan", "value": 1, "width": 1}, {"from": "Irilta", "to": "Meese", "value": 6, "width": 1}, {"from": "Meese", "to": "Scurve", "value": 2, "width": 1}, {"from": "Meese", "to": "Challice", "value": 1, "width": 1}, {"from": "Meese", "to": "Chert", "value": 1, "width": 1}, {"from": "Silanah", "to": "Raest", "value": 2, "width": 1}, {"from": "Baran", "to": "Blind", "value": 1, "width": 1}, {"from": "Doan", "to": "Rood", "value": 1, "width": 1}, {"from": "Vorcan", "to": "Derudan", "value": 1, "width": 1}, {"from": "Korlat", "to": "Horult", "value": 1, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "curvedCCW"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "forceAtlas2Based": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.01,
+            "damping": 0.4,
+            "gravitationalConstant": -50,
+            "springConstant": 0.08,
+            "springLength": 100
+        },
+        "solver": "forceAtlas2Based",
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
